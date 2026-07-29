@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PlayerWithCard } from '@/types';
-import { CARD_HEIGHT, CARD_WIDTH } from '@/lib/cardTier';
 import { PlayerCard } from '../cards/PlayerCard';
 
 interface CardCarouselProps {
@@ -12,150 +11,118 @@ interface CardCarouselProps {
   onSelect?: (player: PlayerWithCard) => void;
 }
 
-const SWIPE_THRESHOLD = 58;
+const SWIPE_THRESHOLD = 55;
 
-const variants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 220 : -220,
-    opacity: 0,
-    scale: 0.9,
-    rotate: direction > 0 ? 3 : -3,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    rotate: 0,
-  },
-  exit: (direction: number) => ({
-    x: direction > 0 ? -220 : 220,
-    opacity: 0,
-    scale: 0.9,
-    rotate: direction > 0 ? -3 : 3,
-  }),
-};
+export const CardCarousel = memo(function CardCarousel({
+  players,
+  onSelect,
+}: CardCarouselProps) {
+  const reduceMotion = useReducedMotion();
+  const [index, setIndex] = useState(0);
 
-export function CardCarousel({ players, onSelect }: CardCarouselProps) {
-  const [[index, direction], setIndex] = useState<[number, number]>([0, 0]);
+  const safeIndex = players.length
+    ? ((index % players.length) + players.length) % players.length
+    : 0;
 
-  if (players.length === 0) {
+  const player = players[safeIndex];
+
+  const changeCard = useCallback(
+    (direction: number) => {
+      setIndex((current) => current + direction);
+    },
+    []
+  );
+
+  const dots = useMemo(
+    () => players.map((playerItem) => playerItem.id),
+    [players]
+  );
+
+  if (!player) {
     return (
-      <div className="py-16 text-center">
-        <p className="font-display text-xl font-black uppercase tracking-wide text-zinc-300">
-          Nenhum card criado
-        </p>
-        <p className="mt-2 text-sm text-zinc-600">
-          Use o botão no topo para entrar no elenco.
-        </p>
-      </div>
+      <p className="py-16 text-center text-zinc-500">
+        Nenhum card criado ainda.
+      </p>
     );
   }
 
-  const wrappedIndex =
-    ((index % players.length) + players.length) % players.length;
-  const player = players[wrappedIndex];
-
-  function paginate(nextDirection: number) {
-    setIndex(([currentIndex]) => [
-      currentIndex + nextDirection,
-      nextDirection,
-    ]);
-  }
-
-  function handleDragEnd(_: unknown, info: PanInfo) {
-    if (info.offset.x < -SWIPE_THRESHOLD) {
-      paginate(1);
-    } else if (info.offset.x > SWIPE_THRESHOLD) {
-      paginate(-1);
-    }
-  }
-
   return (
-    <div className="flex flex-col items-center gap-5 py-8">
-      <div
-        className="relative flex max-w-full items-center justify-center"
-        style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
-      >
-        <AnimatePresence initial={false} custom={direction} mode="popLayout">
-          <motion.div
-            key={player.id}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              x: { type: 'spring', stiffness: 300, damping: 31 },
-              opacity: { duration: 0.18 },
-              rotate: { duration: 0.22 },
-            }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.55}
-            onDragEnd={handleDragEnd}
-            className="absolute touch-pan-y"
-          >
-            <PlayerCard
-              player={player}
-              interactiveTilt={false}
-              onClick={() => onSelect?.(player)}
-            />
-          </motion.div>
-        </AnimatePresence>
+    <div className="flex flex-col items-center gap-5 py-6">
+      <div className="relative flex h-[380px] w-[260px] items-center justify-center">
+        <motion.div
+          key={player.id}
+          initial={
+            reduceMotion
+              ? false
+              : { opacity: 0, scale: 0.94, x: 22, filter: 'blur(4px)' }
+          }
+          animate={{ opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          drag={players.length > 1 ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.28}
+          onDragEnd={(_, info) => {
+            if (info.offset.x <= -SWIPE_THRESHOLD) {
+              changeCard(1);
+            } else if (info.offset.x >= SWIPE_THRESHOLD) {
+              changeCard(-1);
+            }
+          }}
+          className="absolute will-change-transform"
+        >
+          <PlayerCard
+            player={player}
+            interactiveTilt={false}
+            onClick={() => onSelect?.(player)}
+          />
+        </motion.div>
       </div>
 
-      <div className="flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-black/30 p-1.5 backdrop-blur-md">
-        <button
-          type="button"
-          onClick={() => paginate(-1)}
-          aria-label="Card anterior"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-white/[0.06] hover:text-white active:scale-95"
-        >
-          <ChevronLeft size={20} />
-        </button>
-
-        <div className="min-w-[92px] text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
-            Jogador
-          </p>
-          <p className="mt-0.5 text-sm font-extrabold text-zinc-200">
-            {wrappedIndex + 1}{' '}
-            <span className="font-medium text-zinc-600">/ {players.length}</span>
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => paginate(1)}
-          aria-label="Próximo card"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-white/[0.06] hover:text-white active:scale-95"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-
-      {players.length <= 12 && (
-        <div className="flex items-center gap-1.5">
-          {players.map((item, itemIndex) => (
+      {players.length > 1 && (
+        <>
+          <div className="flex items-center gap-5">
             <button
               type="button"
-              key={item.id}
-              aria-label={`Ir para o card ${itemIndex + 1}`}
-              onClick={() =>
-                setIndex([
-                  itemIndex,
-                  itemIndex >= wrappedIndex ? 1 : -1,
-                ])
-              }
-              className={`h-1.5 rounded-full transition-all ${
-                itemIndex === wrappedIndex
-                  ? 'w-7 bg-lime-400'
-                  : 'w-1.5 bg-zinc-800 hover:bg-zinc-600'
-              }`}
-            />
-          ))}
-        </div>
+              onClick={() => changeCard(-1)}
+              aria-label="Card anterior"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-zinc-300 transition hover:border-lime-400/50 hover:text-lime-400 active:scale-95"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <span className="min-w-16 text-center text-sm tabular-nums text-zinc-500">
+              {safeIndex + 1} / {players.length}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => changeCard(1)}
+              aria-label="Próximo card"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-zinc-300 transition hover:border-lime-400/50 hover:text-lime-400 active:scale-95"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+
+          {players.length <= 12 && (
+            <div className="flex gap-1.5">
+              {dots.map((id, dotIndex) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-label={`Ir para card ${dotIndex + 1}`}
+                  onClick={() => setIndex(dotIndex)}
+                  className={`h-1.5 rounded-full transition-[width,background-color] duration-150 ${
+                    dotIndex === safeIndex
+                      ? 'w-6 bg-lime-400'
+                      : 'w-1.5 bg-zinc-700'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
-}
+});

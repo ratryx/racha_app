@@ -46,6 +46,18 @@ export function PlayerCard({
   const tier = getCardTier(player.card.overall);
   const frameId = `frame-${player.id.replaceAll('-', '').slice(0, 12)}`;
 
+
+  const idleDelay = useMemo(() => {
+    const seed = player.id
+      .split('')
+      .reduce(
+        (total, character) => total + character.charCodeAt(0),
+        0
+      );
+
+    return (seed % 10) / 10;
+  }, [player.id]);
+
   const pointerX = useMotionValue(0);
   const pointerY = useMotionValue(0);
 
@@ -62,13 +74,6 @@ export function PlayerCard({
   const shineY = useTransform(pointerY, [-0.5, 0.5], ['3%', '88%']);
   const pointerShine = useMotionTemplate`radial-gradient(circle at ${shineX} ${shineY}, ${tier.shine} 0%, transparent 47%)`;
 
-  const idleDelay = useMemo(() => {
-    return (
-      player.id
-        .split('')
-        .reduce((total, character) => total + character.charCodeAt(0), 0) % 14
-    ) / 10;
-  }, [player.id]);
 
   const displayName = player.nickname?.trim() || player.name;
   const nameSizeClass =
@@ -124,21 +129,25 @@ export function PlayerCard({
           reduceMotion
             ? undefined
             : {
-                y: [0, -7, 0],
-                rotateZ: [0, 0.22, 0, -0.18, 0],
+                y: [0, -4, 0],
+                rotateZ: [0, 0.12, 0, -0.1, 0],
               }
         }
         transition={
           reduceMotion
             ? undefined
             : {
-                duration: 5.6,
+                duration: 6.8,
                 repeat: Infinity,
                 ease: 'easeInOut',
                 delay: idleDelay,
               }
         }
-        style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        style={{
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT,
+          willChange: reduceMotion ? 'auto' : 'transform',
+        }}
       >
         <motion.div
           ref={cardRef}
@@ -157,11 +166,12 @@ export function PlayerCard({
             rotateY: interactiveTilt && !reduceMotion ? rotateY : 0,
             transformPerspective: 1250,
             transformStyle: 'preserve-3d',
-            filter: `drop-shadow(0 24px 34px ${tier.glow})`,
+            filter: `drop-shadow(0 16px 24px ${tier.glow})`,
+            willChange: interactiveTilt ? 'transform' : 'auto',
           }}
           whileHover={
             interactiveTilt && !reduceMotion
-              ? { scale: 1.035 }
+              ? { scale: 1.025, y: -3 }
               : undefined
           }
           whileTap={{ scale: 0.985 }}
@@ -253,6 +263,8 @@ export function PlayerCard({
                   src={player.photo_url}
                   alt={player.name}
                   draggable={false}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover object-top"
                   style={{ filter: 'contrast(1.08) saturate(1.06)' }}
                 />
@@ -299,7 +311,7 @@ export function PlayerCard({
                 className="mt-1 text-[7px] font-extrabold uppercase leading-none tracking-[0.20em]"
                 style={{ color: tier.mutedText }}
               >
-                {tier.name} · Racha da terça
+                {tier.name} · Racha dos amigos
               </p>
             </div>
 

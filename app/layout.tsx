@@ -4,12 +4,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Racha da Terça',
-    template: '%s | Racha da Terça',
+    default: 'Racha dos Amigos',
+    template: '%s | Racha dos Amigos',
   },
   description:
-    'Cards, estatísticas e histórico do elenco do Racha da Terça.',
-  applicationName: 'Racha da Terça',
+    'Cards, estatísticas e histórico do elenco do Racha dos Amigos.',
+  applicationName: 'Racha dos Amigos',
   robots: {
     index: false,
     follow: false,

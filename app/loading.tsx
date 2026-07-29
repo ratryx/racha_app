@@ -10,7 +10,7 @@ export default function Loading() {
         </div>
 
         <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.26em] text-lime-400">
-          Racha da terça
+          Racha dos amigos
         </p>
         <p className="mt-2 text-sm font-semibold text-zinc-500">
           Preparando o elenco...

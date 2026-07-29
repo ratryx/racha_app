@@ -6,7 +6,7 @@ export function GET() {
   return NextResponse.json(
     {
       status: 'ok',
-      service: 'racha-da-terca',
+      service: 'racha-dos-amigos',
       timestamp: new Date().toISOString(),
     },
     {

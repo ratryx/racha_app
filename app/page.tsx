@@ -131,7 +131,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#030605] text-white">
+    <main className="relative min-h-screen overflow-x-hidden bg-transparent text-white">
       <StadiumBackground />
 
       <div className="relative z-20 mx-auto max-w-[1500px] px-4 pt-4 sm:px-8 sm:pt-6">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                 </p>
 
                 <h1 className="font-display mt-2 text-[29px] font-black leading-none tracking-[-0.035em] text-white sm:text-[38px]">
-                  Racha da <span className="text-lime-400">Terça</span>
+                  Racha dos <span className="text-lime-400">Amigos</span>
                 </h1>
 
                 <p className="mt-2 hidden text-sm text-zinc-500 sm:block">

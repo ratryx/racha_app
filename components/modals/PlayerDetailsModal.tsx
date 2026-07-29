@@ -13,7 +13,6 @@ import {
   type PanInfo,
 } from 'framer-motion';
 import {
-  Activity,
   CalendarDays,
   Crown,
   Edit3,
@@ -221,11 +220,6 @@ export function PlayerDetailsModal({
                         value={player.aggregates.total_assists}
                       />
                       <TotalStat
-                        icon={Activity}
-                        label="Desarmes"
-                        value={player.aggregates.total_tackles}
-                      />
-                      <TotalStat
                         icon={Shield}
                         label="Defesas"
                         value={player.aggregates.total_saves}
@@ -413,10 +407,6 @@ function AveragePanel({ player }: { player: PlayerWithCard }) {
           value={average(player.aggregates.total_assists, matches)}
         />
         <AverageValue
-          label="Desarmes"
-          value={average(player.aggregates.total_tackles, matches)}
-        />
-        <AverageValue
           label="Defesas"
           value={average(player.aggregates.total_saves, matches)}
         />
@@ -435,14 +425,13 @@ function MatchHistoryRow({
   const hasNumbers =
     match.goals > 0 ||
     match.assists > 0 ||
-    match.tackles > 0 ||
     match.saves > 0;
 
   const focusValue =
     position === 'GOL'
       ? match.saves
       : position === 'ZAG' || position === 'LAT'
-        ? match.tackles
+        ? Number(match.is_motm)
         : position === 'MEI'
           ? match.assists
           : match.goals;
@@ -451,7 +440,7 @@ function MatchHistoryRow({
     position === 'GOL'
       ? 'defesas'
       : position === 'ZAG' || position === 'LAT'
-        ? 'desarmes'
+        ? 'craque'
         : position === 'MEI'
           ? 'assist.'
           : 'gols';
@@ -498,9 +487,6 @@ function MatchHistoryRow({
             )}
             {match.assists > 0 && (
               <HistoryBadge label={`${match.assists} ASS`} />
-            )}
-            {match.tackles > 0 && (
-              <HistoryBadge label={`${match.tackles} DES`} />
             )}
             {match.saves > 0 && (
               <HistoryBadge label={`${match.saves} DEF`} />
@@ -657,8 +643,8 @@ function getPositionFocus(
 
   if (position === 'ZAG' || position === 'LAT') {
     return {
-      label: 'desarmes',
-      value: player.aggregates.total_tackles,
+      label: 'partidas',
+      value: player.aggregates.matches_played,
     };
   }
 
