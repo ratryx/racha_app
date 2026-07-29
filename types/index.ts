@@ -115,3 +115,5 @@ export type PlayerWithCard = Player & {
   aggregates: PlayerAggregates;
   card: CardAttributes;
 };
+
+export * from './matchCenter';
