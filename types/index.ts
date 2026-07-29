@@ -45,6 +45,20 @@ export interface MatchStat {
   rating: number | null;
 }
 
+export interface PlayerMatchHistory {
+  id: string;
+  match_id: string;
+  match_date: string;
+  location: string | null;
+  notes: string | null;
+  goals: number;
+  assists: number;
+  tackles: number;
+  saves: number;
+  is_motm: boolean;
+  rating: number | null;
+}
+
 export interface PlayerAggregates {
   player_id: string;
   matches_played: number;

@@ -3,6 +3,7 @@ import { createClient } from './client';
 import type {
   Player,
   PlayerAggregates,
+  PlayerMatchHistory,
   PlayerPosition,
   PlayerWithCard,
   Profile,
@@ -139,6 +140,71 @@ export async function getPlayersWithCards(): Promise<PlayerWithCard[]> {
   });
 }
 
+export async function getPlayerMatchHistory(
+  playerId: string,
+  limit = 12
+): Promise<PlayerMatchHistory[]> {
+  await requireUser();
+  const supabase = createClient();
+
+  const { data: stats, error: statsError } = await supabase
+    .from('match_stats')
+    .select(
+      'id, match_id, goals, assists, tackles, saves, is_motm, rating'
+    )
+    .eq('player_id', playerId);
+
+  if (statsError) {
+    throw statsError;
+  }
+
+  if (!stats?.length) {
+    return [];
+  }
+
+  const statsByMatch = new Map(
+    stats.map((stat) => [stat.match_id as string, stat])
+  );
+
+  const { data: matches, error: matchesError } = await supabase
+    .from('matches')
+    .select('id, match_date, location, notes')
+    .in(
+      'id',
+      stats.map((stat) => stat.match_id)
+    )
+    .order('match_date', { ascending: false })
+    .limit(limit);
+
+  if (matchesError) {
+    throw matchesError;
+  }
+
+  return (matches ?? []).flatMap((match) => {
+    const stat = statsByMatch.get(match.id as string);
+
+    if (!stat) {
+      return [];
+    }
+
+    return [
+      {
+        id: stat.id as string,
+        match_id: match.id as string,
+        match_date: match.match_date as string,
+        location: (match.location as string | null) ?? null,
+        notes: (match.notes as string | null) ?? null,
+        goals: Number(stat.goals ?? 0),
+        assists: Number(stat.assists ?? 0),
+        tackles: Number(stat.tackles ?? 0),
+        saves: Number(stat.saves ?? 0),
+        is_motm: Boolean(stat.is_motm),
+        rating: stat.rating === null ? null : Number(stat.rating),
+      },
+    ];
+  });
+}
+
 export async function createPlayer(input: {
   name: string;
   nickname?: string;
@@ -153,6 +219,20 @@ export async function createPlayer(input: {
 
   if (!normalizedName) {
     throw new Error('Informe seu nome.');
+  }
+
+  const { data: existingPlayer, error: existingPlayerError } = await supabase
+    .from('players')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existingPlayerError) {
+    throw existingPlayerError;
+  }
+
+  if (existingPlayer) {
+    throw new Error('Esta conta já possui um card. Use Editar meu card.');
   }
 
   const photoUrl = input.photoFile
@@ -173,7 +253,7 @@ export async function createPlayer(input: {
 
   if (error) {
     if (error.code === '23505') {
-      throw new Error('Esta conta já possui um card.');
+      throw new Error('Esta conta já possui um card. Use Editar meu card.');
     }
 
     throw error;
@@ -185,6 +265,7 @@ export async function createPlayer(input: {
 export async function updateMyPlayer(input: {
   name: string;
   nickname?: string | null;
+  position: PlayerPosition;
   currentPhotoUrl: string | null;
   photoFile?: File;
 }): Promise<Player> {
@@ -206,10 +287,15 @@ export async function updateMyPlayer(input: {
       p_name: normalizedName,
       p_nickname: input.nickname?.trim() || null,
       p_photo_url: photoUrl,
+      p_position: input.position,
     })
     .single();
 
   if (error) {
+    if (error.message.includes('player_not_found')) {
+      throw new Error('Nenhum card foi encontrado para esta conta.');
+    }
+
     throw error;
   }
 

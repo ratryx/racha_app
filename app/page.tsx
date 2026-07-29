@@ -25,6 +25,7 @@ import { Leaderboard } from '@/components/dashboard/Leaderboard';
 
 import { CreatePlayerModal } from '@/components/modals/CreatePlayerModal';
 import { EditPlayerModal } from '@/components/modals/EditPlayerModal';
+import { PlayerDetailsModal } from '@/components/modals/PlayerDetailsModal';
 import { PostMatchModal } from '@/components/modals/PostMatchModal';
 import { ResetPinModal } from '@/components/modals/ResetPinModal';
 
@@ -33,6 +34,8 @@ export default function DashboardPage() {
 
   const [players, setPlayers] = useState<PlayerWithCard[]>([]);
   const [myPlayer, setMyPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] =
+    useState<PlayerWithCard | null>(null);
 
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -44,11 +47,14 @@ export default function DashboardPage() {
 
   const isAdmin = profile?.role === 'admin';
   const hasPlayerCard = Boolean(myPlayer);
+  const canEditSelectedPlayer =
+    Boolean(user && selectedPlayer?.user_id === user.id);
 
   const loadDashboard = useCallback(async () => {
     if (!user) {
       setPlayers([]);
       setMyPlayer(null);
+      setSelectedPlayer(null);
       return;
     }
 
@@ -63,6 +69,17 @@ export default function DashboardPage() {
 
       setPlayers(playerList);
       setMyPlayer(currentPlayer);
+      setSelectedPlayer((currentSelectedPlayer) => {
+        if (!currentSelectedPlayer) {
+          return null;
+        }
+
+        return (
+          playerList.find(
+            (player) => player.id === currentSelectedPlayer.id
+          ) ?? null
+        );
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -92,6 +109,15 @@ export default function DashboardPage() {
     }
   }
 
+  function handleEditFromDetails() {
+    if (!canEditSelectedPlayer) {
+      return;
+    }
+
+    setSelectedPlayer(null);
+    setEditOpen(true);
+  }
+
   if (authLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#030605] text-sm font-semibold text-zinc-500">
@@ -111,7 +137,6 @@ export default function DashboardPage() {
       <div className="relative z-20 mx-auto max-w-[1500px] px-4 pt-4 sm:px-8 sm:pt-6">
         <header className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#050705]/[0.94] shadow-2xl shadow-black/40 backdrop-blur-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(163,230,53,.12),transparent_34%),radial-gradient(circle_at_88%_10%,rgba(34,211,238,.07),transparent_28%),linear-gradient(180deg,rgba(255,255,255,.025),transparent_70%)]" />
-
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
           <div className="relative px-4 py-5 sm:px-6 sm:py-6">
@@ -217,11 +242,17 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="lg:hidden">
-                <CardCarousel players={players} />
+                <CardCarousel
+                  players={players}
+                  onSelect={setSelectedPlayer}
+                />
               </div>
 
               <div className="hidden lg:block">
-                <CardGrid players={players} />
+                <CardGrid
+                  players={players}
+                  onSelect={setSelectedPlayer}
+                />
               </div>
             </>
           )}
@@ -231,6 +262,14 @@ export default function DashboardPage() {
           <Leaderboard players={players} />
         </aside>
       </div>
+
+      <PlayerDetailsModal
+        open={Boolean(selectedPlayer)}
+        player={selectedPlayer}
+        canEdit={canEditSelectedPlayer}
+        onClose={() => setSelectedPlayer(null)}
+        onEdit={handleEditFromDetails}
+      />
 
       <CreatePlayerModal
         open={createOpen}
