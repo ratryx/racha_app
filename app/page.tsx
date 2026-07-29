@@ -1,30 +1,26 @@
 'use client';
 
 import {
-  useCallback,
   useEffect,
   useState,
 } from 'react';
 
-import type {
-  Group,
-  Player,
-  PlayerWithCard,
-} from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
+import type { PlayerWithCard } from '@/types';
 import {
-  getAdminUsers,
-  getGroups,
-  getMyGroupMembership,
-  getMyPlayer,
-  getPlayersWithCards,
-} from '@/lib/supabase/queries';
+  APP_SECTION_HASHES,
+  getSectionFromHash,
+  type AppSection,
+} from '@/types/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-import { LoginScreen } from '@/components/auth/LoginScreen';
 import { GroupAdminModal } from '@/components/admin/GroupAdminModal';
-import { DashboardContent } from '@/components/dashboard/DashboardContent';
+import { LoginScreen } from '@/components/auth/LoginScreen';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { StadiumBackground } from '@/components/dashboard/StadiumBackground';
+import { DashboardSectionContent } from '@/components/layout/DashboardSectionContent';
+import { AppMenuSheet } from '@/components/navigation/AppMenuSheet';
+import { AppNavigation } from '@/components/navigation/AppNavigation';
 
 import { CreatePlayerModal } from '@/components/modals/CreatePlayerModal';
 import { EditPlayerModal } from '@/components/modals/EditPlayerModal';
@@ -40,28 +36,21 @@ export default function DashboardPage() {
     signOut,
   } = useAuth();
 
-  const [players, setPlayers] =
-    useState<PlayerWithCard[]>([]);
-  const [myPlayer, setMyPlayer] =
-    useState<Player | null>(null);
-  const [groups, setGroups] =
-    useState<Group[]>([]);
-  const [currentGroup, setCurrentGroup] =
-    useState<Group | null>(null);
-  const [viewedGroupId, setViewedGroupId] =
-    useState<string | null>(null);
+  const isAdmin =
+    profile?.role === 'admin';
+
+  const dashboard = useDashboardData({
+    userId: user?.id ?? null,
+    isAdmin,
+  });
+
+  const [activeSection, setActiveSection] =
+    useState<AppSection>('cards');
   const [selectedPlayer, setSelectedPlayer] =
     useState<PlayerWithCard | null>(null);
 
-  const [dashboardLoading, setDashboardLoading] =
+  const [menuOpen, setMenuOpen] =
     useState(false);
-  const [errorMessage, setErrorMessage] =
-    useState('');
-  const [
-    pendingUsersCount,
-    setPendingUsersCount,
-  ] = useState(0);
-
   const [createOpen, setCreateOpen] =
     useState(false);
   const [editOpen, setEditOpen] =
@@ -73,183 +62,97 @@ export default function DashboardPage() {
   const [groupAdminOpen, setGroupAdminOpen] =
     useState(false);
 
-  const isAdmin = profile?.role === 'admin';
-  const hasPlayerCard = Boolean(myPlayer);
+  const hasPlayerCard =
+    Boolean(dashboard.myPlayer);
+
   const canEditSelectedPlayer = Boolean(
     user &&
       selectedPlayer?.user_id === user.id
   );
 
-  const loadDashboard = useCallback(async () => {
-    if (!user) {
-      setPlayers([]);
-      setMyPlayer(null);
-      setGroups([]);
-      setCurrentGroup(null);
-      setSelectedPlayer(null);
-      setPendingUsersCount(0);
-      return;
-    }
-
-    setDashboardLoading(true);
-    setErrorMessage('');
-
-    try {
-      const [
-        currentPlayer,
-        membership,
-        availableGroups,
-        adminUsers,
-      ] = await Promise.all([
-        getMyPlayer(),
-        getMyGroupMembership(),
-        isAdmin
-          ? getGroups()
-          : Promise.resolve([] as Group[]),
-        isAdmin
-          ? getAdminUsers()
-          : Promise.resolve([]),
-      ]);
-
-      setPendingUsersCount(
-        adminUsers.filter(
-          (adminUser) =>
-            adminUser.group_id === null
-        ).length
-      );
-
-      const memberGroup =
-        membership?.group ?? null;
-
-      let nextGroup = memberGroup;
-
-      if (isAdmin) {
-        setGroups(availableGroups);
-
-        const requestedGroup =
-          viewedGroupId
-            ? availableGroups.find(
-                (group) =>
-                  group.id === viewedGroupId
-              ) ?? null
-            : null;
-
-        nextGroup =
-          requestedGroup ??
-          memberGroup ??
-          availableGroups[0] ??
-          null;
-      } else {
-        setGroups(
-          memberGroup ? [memberGroup] : []
-        );
-      }
-
-      const playerList = nextGroup
-        ? await getPlayersWithCards(
-            nextGroup.id
-          )
-        : [];
-
-      setMyPlayer(currentPlayer);
-      setCurrentGroup(nextGroup);
-      setPlayers(playerList);
-
-      if (
-        isAdmin &&
-        nextGroup &&
-        nextGroup.id !== viewedGroupId
-      ) {
-        setViewedGroupId(nextGroup.id);
-      }
-
-      setSelectedPlayer(
-        (currentSelectedPlayer) => {
-          if (!currentSelectedPlayer) {
-            return null;
-          }
-
-          return (
-            playerList.find(
-              (player) =>
-                player.id ===
-                currentSelectedPlayer.id
-            ) ?? null
-          );
-        }
-      );
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar o elenco.'
-      );
-    } finally {
-      setDashboardLoading(false);
-    }
-  }, [isAdmin, user, viewedGroupId]);
-
   useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return;
-    }
-
-    function openGroupsFromHash() {
+    function syncFromHash() {
       if (
-        window.location.hash === '#groups'
+        window.location.hash === '#groups' &&
+        isAdmin
       ) {
         setGroupAdminOpen(true);
+        setMenuOpen(false);
+        return;
+      }
+
+      const section = getSectionFromHash(
+        window.location.hash
+      );
+
+      if (section) {
+        setActiveSection(section);
       }
     }
 
-    openGroupsFromHash();
+    syncFromHash();
 
     window.addEventListener(
       'hashchange',
-      openGroupsFromHash
+      syncFromHash
     );
 
     return () => {
       window.removeEventListener(
         'hashchange',
-        openGroupsFromHash
+        syncFromHash
       );
     };
   }, [isAdmin]);
 
-  function closeGroupAdminPanel() {
+  function navigateTo(
+    section: AppSection
+  ) {
+    setActiveSection(section);
+    setMenuOpen(false);
+
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}${APP_SECTION_HASHES[section]}`
+    );
+  }
+
+  function openGroupsPanel() {
+    setMenuOpen(false);
+    setGroupAdminOpen(true);
+
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}#groups`
+    );
+  }
+
+  function closeGroupsPanel() {
     setGroupAdminOpen(false);
 
-    if (
-      window.location.hash === '#groups'
-    ) {
-      window.history.replaceState(
-        null,
-        '',
-        `${window.location.pathname}${window.location.search}`
-      );
-    }
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}${APP_SECTION_HASHES[activeSection]}`
+    );
   }
 
   async function handleSignOut() {
-    setErrorMessage('');
-
     try {
       await signOut();
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível sair.'
+      console.error(
+        'Não foi possível sair:',
+        error
       );
     }
   }
 
   function openPlayerCardEditor() {
+    setMenuOpen(false);
+
     if (hasPlayerCard) {
       setEditOpen(true);
     } else {
@@ -283,41 +186,78 @@ export default function DashboardPage() {
       <StadiumBackground />
 
       <DashboardHeader
-        currentGroup={currentGroup}
-        groups={groups}
+        currentGroup={
+          dashboard.currentGroup
+        }
+        groups={dashboard.groups}
+        isAdmin={isAdmin}
+        activeSection={activeSection}
+        pendingUsersCount={
+          dashboard.pendingUsersCount
+        }
+        onSelectGroup={
+          dashboard.selectGroup
+        }
+        onNavigate={navigateTo}
+        onOpenMenu={() =>
+          setMenuOpen(true)
+        }
+      />
+
+      <DashboardSectionContent
+        activeSection={activeSection}
+        players={dashboard.players}
+        currentGroup={
+          dashboard.currentGroup
+        }
+        loading={dashboard.loading}
+        errorMessage={
+          dashboard.errorMessage
+        }
         isAdmin={isAdmin}
         hasPlayerCard={hasPlayerCard}
-        pendingUsersCount={
-          pendingUsersCount
-        }
-        onSelectGroup={setViewedGroupId}
-        onSignOut={handleSignOut}
-        onOpenGroups={() =>
-          setGroupAdminOpen(true)
-        }
-        onOpenResetPin={() =>
-          setResetPinOpen(true)
-        }
+        onSelectPlayer={setSelectedPlayer}
+        onOpenGroups={openGroupsPanel}
+        onOpenCard={openPlayerCardEditor}
         onOpenPostMatch={() =>
           setMatchOpen(true)
+        }
+      />
+
+      <AppNavigation
+        activeSection={activeSection}
+        pendingUsersCount={
+          dashboard.pendingUsersCount
+        }
+        onNavigate={navigateTo}
+        onOpenMenu={() =>
+          setMenuOpen(true)
+        }
+        variant="mobile"
+      />
+
+      <AppMenuSheet
+        open={menuOpen}
+        profile={profile}
+        player={dashboard.myPlayer}
+        currentGroup={
+          dashboard.currentGroup
+        }
+        isAdmin={isAdmin}
+        pendingUsersCount={
+          dashboard.pendingUsersCount
+        }
+        onClose={() =>
+          setMenuOpen(false)
         }
         onOpenPlayerCard={
           openPlayerCardEditor
         }
-      />
-
-      <DashboardContent
-        players={players}
-        currentGroup={currentGroup}
-        loading={dashboardLoading}
-        errorMessage={errorMessage}
-        isAdmin={isAdmin}
-        hasPlayerCard={hasPlayerCard}
-        onSelectPlayer={setSelectedPlayer}
-        onOpenGroups={() =>
-          setGroupAdminOpen(true)
+        onOpenGroups={openGroupsPanel}
+        onOpenResetPin={() =>
+          setResetPinOpen(true)
         }
-        onOpenCard={openPlayerCardEditor}
+        onSignOut={handleSignOut}
       />
 
       <PlayerDetailsModal
@@ -332,39 +272,44 @@ export default function DashboardPage() {
 
       <CreatePlayerModal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={loadDashboard}
+        onClose={() =>
+          setCreateOpen(false)
+        }
+        onCreated={dashboard.reload}
       />
 
       <EditPlayerModal
         open={editOpen}
-        player={myPlayer}
-        onClose={() => setEditOpen(false)}
-        onUpdated={loadDashboard}
+        player={dashboard.myPlayer}
+        onClose={() =>
+          setEditOpen(false)
+        }
+        onUpdated={dashboard.reload}
       />
 
       {isAdmin && (
         <>
           <GroupAdminModal
             open={groupAdminOpen}
-            groups={groups}
+            groups={dashboard.groups}
             currentGroupId={
-              currentGroup?.id ?? null
+              dashboard.currentGroup?.id ??
+              null
             }
-            onClose={
-              closeGroupAdminPanel
+            onClose={closeGroupsPanel}
+            onChanged={dashboard.reload}
+            onSelectGroup={
+              dashboard.selectGroup
             }
-            onChanged={loadDashboard}
-            onSelectGroup={setViewedGroupId}
           />
 
           <PostMatchModal
             open={matchOpen}
-            players={players}
+            players={dashboard.players}
             onClose={() =>
               setMatchOpen(false)
             }
-            onSaved={loadDashboard}
+            onSaved={dashboard.reload}
           />
 
           <ResetPinModal

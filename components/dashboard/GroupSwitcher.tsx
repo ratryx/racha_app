@@ -34,7 +34,8 @@ export function GroupSwitcher({
 
   const currentGroup =
     groups.find(
-      (group) => group.id === currentGroupId
+      (group) =>
+        group.id === currentGroupId
     ) ??
     groups[0] ??
     null;
@@ -53,7 +54,9 @@ export function GroupSwitcher({
       }
     }
 
-    function handleKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(
+      event: KeyboardEvent
+    ) {
       if (event.key === 'Escape') {
         setOpen(false);
       }
@@ -87,7 +90,7 @@ export function GroupSwitcher({
   return (
     <div
       ref={containerRef}
-      className="relative mt-4 max-w-[440px]"
+      className="relative"
     >
       <button
         type="button"
@@ -96,30 +99,28 @@ export function GroupSwitcher({
         onClick={() =>
           setOpen((current) => !current)
         }
-        className="group flex w-full items-center gap-3 rounded-2xl border border-white/[0.09] bg-white/[0.035] p-2.5 text-left shadow-lg shadow-black/10 transition hover:border-lime-400/25 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50"
+        className="group flex w-full items-center gap-3 rounded-2xl border border-white/[0.10] bg-black/35 px-3 py-2.5 text-left transition hover:border-lime-400/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-lime-400/15 bg-lime-400/[0.08] text-lime-400">
-          <Layers3 size={17} />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-lime-400/20 bg-lime-400/[0.10] text-lime-300">
+          <Layers3 size={15} />
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[8px] font-extrabold uppercase tracking-[0.2em] text-zinc-600">
-            Visualizando grupo
+          <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400">
+            Grupo visualizado
           </span>
 
-          <span className="mt-1 block truncate text-sm font-black text-white">
+          <span className="mt-0.5 block truncate text-sm font-bold text-white">
             {currentGroup.name}
           </span>
         </span>
 
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition group-hover:bg-white/[0.05] group-hover:text-white">
-          <ChevronDown
-            size={17}
-            className={`transition-transform duration-200 ${
-              open ? 'rotate-180' : ''
-            }`}
-          />
-        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-zinc-400 transition-transform duration-200 group-hover:text-white ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
       </button>
 
       <AnimatePresence>
@@ -128,7 +129,7 @@ export function GroupSwitcher({
             role="listbox"
             initial={{
               opacity: 0,
-              y: -6,
+              y: -5,
               scale: 0.985,
             }}
             animate={{
@@ -138,14 +139,14 @@ export function GroupSwitcher({
             }}
             exit={{
               opacity: 0,
-              y: -5,
+              y: -4,
               scale: 0.985,
             }}
             transition={{
               duration: 0.16,
               ease: [0.22, 1, 0.36, 1],
             }}
-            className="absolute inset-x-0 top-[calc(100%+8px)] z-[90] overflow-hidden rounded-2xl border border-white/[0.1] bg-[#090d0a]/95 p-1.5 shadow-2xl shadow-black/70 backdrop-blur-2xl"
+            className="absolute inset-x-0 top-[calc(100%+8px)] z-[100] overflow-hidden rounded-2xl border border-white/[0.13] bg-[#080c09]/98 p-1.5 shadow-2xl shadow-black/80 backdrop-blur-2xl"
           >
             <div className="max-h-64 overflow-y-auto">
               {groups.map((group) => {
@@ -164,28 +165,28 @@ export function GroupSwitcher({
                     }}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
                       selected
-                        ? 'bg-lime-400/[0.10] text-white'
-                        : 'text-zinc-400 hover:bg-white/[0.045] hover:text-white'
+                        ? 'bg-lime-400/[0.12] text-white'
+                        : 'text-zinc-300 hover:bg-white/[0.06] hover:text-white'
                     }`}
                   >
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
                         selected
-                          ? 'border-lime-400/25 bg-lime-400/[0.12] text-lime-400'
-                          : 'border-white/[0.07] bg-white/[0.025] text-zinc-600'
+                          ? 'border-lime-400/30 bg-lime-400/[0.14] text-lime-300'
+                          : 'border-white/[0.10] bg-white/[0.035] text-zinc-400'
                       }`}
                     >
                       <Layers3 size={14} />
                     </span>
 
-                    <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                       {group.name}
                     </span>
 
                     {selected && (
                       <Check
                         size={16}
-                        className="shrink-0 text-lime-400"
+                        className="shrink-0 text-lime-300"
                       />
                     )}
                   </button>
