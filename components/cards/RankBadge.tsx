@@ -1,12 +1,26 @@
 import { Crown } from 'lucide-react';
 
-export function RankBadge({ motm }: { motm: number }) {
-  if (motm === 0) return null;
+interface RankBadgeProps {
+  motm: number;
+  accent: string;
+}
+
+export function RankBadge({ motm, accent }: RankBadgeProps) {
+  if (motm <= 0) {
+    return null;
+  }
 
   return (
-    <div className="flex items-center gap-1 bg-zinc-800/80 border border-lime-400/40 rounded-full px-3 py-1">
-      <Crown size={14} className="text-lime-400" />
-      <span className="text-xs text-lime-300 font-medium">{motm}x craque</span>
-    </div>
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border bg-black/25 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] backdrop-blur-md"
+      style={{
+        borderColor: `${accent}66`,
+        color: accent,
+        boxShadow: `inset 0 0 12px ${accent}14`,
+      }}
+    >
+      <Crown size={12} strokeWidth={2.4} />
+      {motm}x craque
+    </span>
   );
 }
