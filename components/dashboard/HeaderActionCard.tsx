@@ -16,6 +16,7 @@ interface HeaderActionCardProps {
   variant: ActionVariant;
   onClick: () => void;
   disabled?: boolean;
+  badge?: number;
 }
 
 const VARIANTS: Record<
@@ -60,6 +61,7 @@ export function HeaderActionCard({
   variant,
   onClick,
   disabled = false,
+  badge = 0,
 }: HeaderActionCardProps) {
   const styles = VARIANTS[variant];
 
@@ -68,8 +70,13 @@ export function HeaderActionCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group flex min-h-[76px] items-center gap-3 rounded-[20px] border p-3 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-[88px] sm:p-3.5 ${styles.container}`}
+      className={`group relative flex min-h-[76px] items-center gap-3 rounded-[20px] border p-3 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-[88px] sm:p-3.5 ${styles.container}`}
     >
+      {badge > 0 && (
+        <span className="absolute right-2.5 top-2.5 flex min-w-5 items-center justify-center rounded-full border border-amber-300/25 bg-amber-300 px-1.5 py-0.5 text-[9px] font-black leading-none text-black shadow-lg shadow-black/20">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
       <span
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg shadow-black/10 sm:h-12 sm:w-12 ${styles.icon}`}
       >

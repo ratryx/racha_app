@@ -18,6 +18,7 @@ interface DashboardHeaderProps {
   groups: Group[];
   isAdmin: boolean;
   hasPlayerCard: boolean;
+  pendingUsersCount: number;
   onSelectGroup: (groupId: string) => void;
   onSignOut: () => void;
   onOpenGroups: () => void;
@@ -31,6 +32,7 @@ export function DashboardHeader({
   groups,
   isAdmin,
   hasPlayerCard,
+  pendingUsersCount,
   onSelectGroup,
   onSignOut,
   onOpenGroups,
@@ -102,8 +104,13 @@ export function DashboardHeader({
                   icon={FolderCog}
                   eyebrow="Organização"
                   title="Gerenciar grupos"
-                  description="Criar grupos e mover jogadores"
+                  description={
+                    pendingUsersCount > 0
+                      ? `${pendingUsersCount} aguardando grupo`
+                      : 'Criar grupos e mover jogadores'
+                  }
                   variant="groups"
+                  badge={pendingUsersCount}
                   onClick={onOpenGroups}
                 />
 

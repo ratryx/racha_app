@@ -13,6 +13,7 @@ import type {
 } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  getAdminUsers,
   getGroups,
   getMyGroupMembership,
   getMyPlayer,
@@ -56,6 +57,10 @@ export default function DashboardPage() {
     useState(false);
   const [errorMessage, setErrorMessage] =
     useState('');
+  const [
+    pendingUsersCount,
+    setPendingUsersCount,
+  ] = useState(0);
 
   const [createOpen, setCreateOpen] =
     useState(false);
@@ -82,6 +87,7 @@ export default function DashboardPage() {
       setGroups([]);
       setCurrentGroup(null);
       setSelectedPlayer(null);
+      setPendingUsersCount(0);
       return;
     }
 
@@ -93,13 +99,24 @@ export default function DashboardPage() {
         currentPlayer,
         membership,
         availableGroups,
+        adminUsers,
       ] = await Promise.all([
         getMyPlayer(),
         getMyGroupMembership(),
         isAdmin
           ? getGroups()
           : Promise.resolve([] as Group[]),
+        isAdmin
+          ? getAdminUsers()
+          : Promise.resolve([]),
       ]);
+
+      setPendingUsersCount(
+        adminUsers.filter(
+          (adminUser) =>
+            adminUser.group_id === null
+        ).length
+      );
 
       const memberGroup =
         membership?.group ?? null;
@@ -176,6 +193,48 @@ export default function DashboardPage() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    function openGroupsFromHash() {
+      if (
+        window.location.hash === '#groups'
+      ) {
+        setGroupAdminOpen(true);
+      }
+    }
+
+    openGroupsFromHash();
+
+    window.addEventListener(
+      'hashchange',
+      openGroupsFromHash
+    );
+
+    return () => {
+      window.removeEventListener(
+        'hashchange',
+        openGroupsFromHash
+      );
+    };
+  }, [isAdmin]);
+
+  function closeGroupAdminPanel() {
+    setGroupAdminOpen(false);
+
+    if (
+      window.location.hash === '#groups'
+    ) {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}`
+      );
+    }
+  }
+
   async function handleSignOut() {
     setErrorMessage('');
 
@@ -228,6 +287,9 @@ export default function DashboardPage() {
         groups={groups}
         isAdmin={isAdmin}
         hasPlayerCard={hasPlayerCard}
+        pendingUsersCount={
+          pendingUsersCount
+        }
         onSelectGroup={setViewedGroupId}
         onSignOut={handleSignOut}
         onOpenGroups={() =>
@@ -289,8 +351,8 @@ export default function DashboardPage() {
             currentGroupId={
               currentGroup?.id ?? null
             }
-            onClose={() =>
-              setGroupAdminOpen(false)
+            onClose={
+              closeGroupAdminPanel
             }
             onChanged={loadDashboard}
             onSelectGroup={setViewedGroupId}
