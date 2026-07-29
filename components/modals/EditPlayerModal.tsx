@@ -1,67 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ImagePlus, LoaderCircle, X } from 'lucide-react';
-import { createPlayer } from '@/lib/supabase/queries';
-import type { PlayerPosition } from '@/types';
+import { updateMyPlayer } from '@/lib/supabase/queries';
+import type { Player } from '@/types';
 
-const POSITIONS: PlayerPosition[] = ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'];
-
-interface CreatePlayerModalProps {
+interface EditPlayerModalProps {
   open: boolean;
+  player: Player | null;
   onClose: () => void;
-  onCreated: () => void | Promise<void>;
+  onUpdated: () => void | Promise<void>;
 }
 
-export function CreatePlayerModal({
+export function EditPlayerModal({
   open,
+  player,
   onClose,
-  onCreated,
-}: CreatePlayerModalProps) {
+  onUpdated,
+}: EditPlayerModalProps) {
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [position, setPosition] = useState<PlayerPosition>('MEI');
   const [photoFile, setPhotoFile] = useState<File>();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  function resetForm() {
-    setName('');
-    setNickname('');
-    setPosition('MEI');
-    setPhotoFile(undefined);
-    setErrorMessage('');
-  }
-
-  function closeModal() {
-    if (loading) {
+  useEffect(() => {
+    if (!open || !player) {
       return;
     }
 
-    resetForm();
-    onClose();
+    setName(player.name);
+    setNickname(player.nickname ?? '');
+    setPhotoFile(undefined);
+    setErrorMessage('');
+  }, [open, player]);
+
+  function closeModal() {
+    if (!loading) {
+      onClose();
+    }
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    if (!player) {
+      return;
+    }
+
     setErrorMessage('');
     setLoading(true);
 
     try {
-      await createPlayer({
+      await updateMyPlayer({
         name,
         nickname,
-        position,
+        currentPhotoUrl: player.photo_url,
         photoFile,
       });
 
-      await onCreated();
-      resetForm();
+      await onUpdated();
       onClose();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : 'Não foi possível criar o card.'
+        error instanceof Error ? error.message : 'Não foi possível editar o card.'
       );
     } finally {
       setLoading(false);
@@ -70,7 +73,7 @@ export function CreatePlayerModal({
 
   return (
     <AnimatePresence>
-      {open && (
+      {open && player && (
         <motion.div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
@@ -85,18 +88,18 @@ export function CreatePlayerModal({
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 50, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[28px] border border-white/10 bg-zinc-950 p-5 shadow-2xl sm:rounded-[28px] sm:p-7"
+            className="w-full max-w-lg rounded-t-[28px] border border-white/10 bg-zinc-950 p-5 shadow-2xl sm:rounded-[28px] sm:p-7"
           >
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-lime-400">
-                  Primeiro acesso
+                  Seu jogador
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
-                  Crie seu card
+                  Editar card
                 </h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Depois, você poderá alterar somente nome e foto.
+                  A posição e as estatísticas não podem ser alteradas aqui.
                 </p>
               </div>
 
@@ -112,11 +115,11 @@ export function CreatePlayerModal({
 
             <div className="space-y-5">
               <div>
-                <label htmlFor="player-name" className="mb-2 block text-sm text-zinc-400">
+                <label htmlFor="edit-player-name" className="mb-2 block text-sm text-zinc-400">
                   Nome
                 </label>
                 <input
-                  id="player-name"
+                  id="edit-player-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   maxLength={60}
@@ -127,50 +130,29 @@ export function CreatePlayerModal({
 
               <div>
                 <label
-                  htmlFor="player-nickname"
+                  htmlFor="edit-player-nickname"
                   className="mb-2 block text-sm text-zinc-400"
                 >
                   Nome no card
                 </label>
                 <input
-                  id="player-nickname"
+                  id="edit-player-nickname"
                   value={nickname}
                   onChange={(event) => setNickname(event.target.value)}
                   maxLength={24}
-                  placeholder="Apelido ou primeiro nome"
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-black/40 px-4 text-white outline-none transition placeholder:text-zinc-700 focus:border-lime-400/70 focus:ring-4 focus:ring-lime-400/10"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-black/40 px-4 text-white outline-none transition focus:border-lime-400/70 focus:ring-4 focus:ring-lime-400/10"
                 />
               </div>
 
-              <fieldset>
-                <legend className="mb-2 text-sm text-zinc-400">Posição</legend>
-                <div className="grid grid-cols-5 gap-2">
-                  {POSITIONS.map((item) => (
-                    <button
-                      type="button"
-                      key={item}
-                      onClick={() => setPosition(item)}
-                      className={`rounded-xl border px-2 py-2.5 text-sm font-bold transition ${
-                        position === item
-                          ? 'border-lime-400 bg-lime-400 text-black'
-                          : 'border-white/10 bg-white/[0.03] text-zinc-300 hover:border-lime-400/40'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-
               <div>
                 <label
-                  htmlFor="player-photo"
+                  htmlFor="edit-player-photo"
                   className="mb-2 block text-sm text-zinc-400"
                 >
-                  Foto
+                  Nova foto
                 </label>
                 <label
-                  htmlFor="player-photo"
+                  htmlFor="edit-player-photo"
                   className="flex min-h-24 cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/[0.025] px-4 py-4 transition hover:border-lime-400/50 hover:bg-lime-400/[0.04]"
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-400/10 text-lime-400">
@@ -178,15 +160,15 @@ export function CreatePlayerModal({
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-white">
-                      {photoFile?.name ?? 'Selecionar uma foto'}
+                      {photoFile?.name ?? 'Manter foto atual'}
                     </span>
                     <span className="mt-1 block text-xs text-zinc-500">
-                      JPG, PNG ou WEBP. Máximo de 5 MB.
+                      Selecione um arquivo apenas para substituir.
                     </span>
                   </span>
                 </label>
                 <input
-                  id="player-photo"
+                  id="edit-player-photo"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => setPhotoFile(event.target.files?.[0])}
@@ -216,7 +198,7 @@ export function CreatePlayerModal({
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-lime-400 px-4 py-3 font-extrabold text-black transition hover:bg-lime-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading && <LoaderCircle size={18} className="animate-spin" />}
-                Criar card
+                Salvar
               </button>
             </div>
           </motion.form>

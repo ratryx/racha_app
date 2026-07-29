@@ -1,7 +1,18 @@
 export type PlayerPosition = 'GOL' | 'ZAG' | 'LAT' | 'MEI' | 'ATA';
+export type UserRole = 'user' | 'admin';
+
+export interface Profile {
+  id: string;
+  phone: string | null;
+  display_name: string | null;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Player {
   id: string;
+  user_id: string | null;
   name: string;
   nickname: string | null;
   photo_url: string | null;
@@ -34,7 +45,6 @@ export interface MatchStat {
   rating: number | null;
 }
 
-// Retorno da view player_aggregates
 export interface PlayerAggregates {
   player_id: string;
   matches_played: number;
@@ -46,13 +56,12 @@ export interface PlayerAggregates {
   avg_rating: number;
 }
 
-// Atributos calculados que aparecem no card (estilo FUT)
 export interface CardAttributes {
   overall: number;
   ata: number;
   def: number;
-  fis: number; // físico/força
-  hab: number; // habilidade
+  fis: number;
+  hab: number;
 }
 
 export type PlayerWithCard = Player & {
