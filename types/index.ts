@@ -1,6 +1,37 @@
 export type PlayerPosition = 'GOL' | 'ZAG' | 'LAT' | 'MEI' | 'ATA';
 export type UserRole = 'user' | 'admin';
 
+export interface Group {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMembership {
+  id: string;
+  group_id: string;
+  user_id: string;
+  created_at: string;
+  group: Group | null;
+}
+
+export interface AdminUserOverview {
+  id: string;
+  phone: string | null;
+  display_name: string | null;
+  role: UserRole;
+  created_at: string;
+  group_id: string | null;
+  group_name: string | null;
+  player_id: string | null;
+  player_name: string | null;
+  player_nickname: string | null;
+}
+
 export interface Profile {
   id: string;
   phone: string | null;
@@ -13,6 +44,7 @@ export interface Profile {
 export interface Player {
   id: string;
   user_id: string | null;
+  group_id: string | null;
   name: string;
   nickname: string | null;
   photo_url: string | null;
@@ -24,6 +56,7 @@ export interface Player {
 
 export interface Match {
   id: string;
+  group_id: string;
   match_date: string;
   location: string | null;
   notes: string | null;
